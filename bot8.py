@@ -249,3 +249,7 @@ Available Commands:
 Use commands responsibly!
 ```"""
     await ctx.send(help_text)
+
+# -------------- Run --------------
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
+
