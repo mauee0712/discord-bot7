@@ -2,132 +2,170 @@ import discord
 from discord.ext import commands, tasks
 import asyncio
 import os
-import random
 
 intents = discord.Intents.default()
-intents.message_content = True
 intents.members = True
+intents.message_content = True
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
+bot = commands.Bot(command_prefix="!", intents=intents)
+bot.remove_command("help")
 
-# ----- Ban -----
+warnings_db = {}
+
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}!")
+
+# Ban command
 @bot.command()
 @commands.has_permissions(ban_members=True)
 async def ban(ctx, member: discord.Member, *, reason=None):
-    await member.ban(reason=reason)
-    await ctx.send(f"🔨 {member.mention} was banned. Reason: {reason if reason else 'No reason provided'}")
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(f"```✅ {member} has been banned.\nReason: {reason if reason else 'No reason provided.'}```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to ban {member}: {e}```")
 
-# ----- Unban -----
+# Unban command
 @bot.command()
 @commands.has_permissions(ban_members=True)
-async def unban(ctx, *, member):
+async def unban(ctx, *, user: str):
     banned_users = await ctx.guild.bans()
-    try:
-        name, discriminator = member.split("#")
-    except ValueError:
-        await ctx.send("❌ Please provide full username with discriminator (e.g. User#1234).")
-        return
+    name, discrim = user.split("#")
     for ban_entry in banned_users:
-        user = ban_entry.user
-        if (user.name, user.discriminator) == (name, discriminator):
-            await ctx.guild.unban(user)
-            await ctx.send(f"✅ Unbanned {user.mention}")
+        user_obj = ban_entry.user
+        if (user_obj.name, user_obj.discriminator) == (name, discrim):
+            await ctx.guild.unban(user_obj)
+            await ctx.send(f"```✅ Unbanned {user_obj}.```")
             return
-    await ctx.send(f"❌ User {member} not found in ban list.")
+    await ctx.send(f"```❌ User {user} not found in banned list.```")
 
-# ----- Kick -----
+# Kick command
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
-    await member.kick(reason=reason)
-    await ctx.send(f"👢 {member.mention} was kicked. Reason: {reason if reason else 'No reason provided'}")
+    try:
+        await member.kick(reason=reason)
+        await ctx.send(f"```✅ {member} has been kicked.\nReason: {reason if reason else 'No reason provided.'}```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to kick {member}: {e}```")
 
-# ----- giverole -----
+# Give role
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def giverole(ctx, member: discord.Member, *, role: discord.Role):
-    await member.add_roles(role)
-    await ctx.send(f"✅ {member.mention} has been given the role **{role.name}**.")
+async def giverole(ctx, member: discord.Member, *, role_name):
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if not role:
+        return await ctx.send(f"```❌ Role '{role_name}' not found.```")
+    try:
+        await member.add_roles(role)
+        await ctx.send(f"```✅ Given role '{role.name}' to {member}.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Could not add role: {e}```")
 
-# ----- takerole -----
+# Take role
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def takerole(ctx, member: discord.Member, *, role: discord.Role):
-    await member.remove_roles(role)
-    await ctx.send(f"✅ {member.mention} has had the role **{role.name}** removed.")
+async def takerole(ctx, member: discord.Member, *, role_name):
+    role = discord.utils.get(ctx.guild.roles, name=role_name)
+    if not role:
+        return await ctx.send(f"```❌ Role '{role_name}' not found.```")
+    try:
+        await member.remove_roles(role)
+        await ctx.send(f"```✅ Removed role '{role.name}' from {member}.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Could not remove role: {e}```")
 
-# ----- mute -----
+# Mute command
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def mute(ctx, member: discord.Member, seconds: int = None, *, reason=None):
-    muted_role = discord.utils.get(ctx.guild.roles, name="muted")
-    if not muted_role:
-        muted_role = await ctx.guild.create_role(name="muted")
-        for channel in ctx.guild.channels:
-            await channel.set_permissions(muted_role, speak=False, send_messages=False, read_message_history=True, read_messages=False)
-    await member.add_roles(muted_role, reason=reason)
-    if seconds:
-        await ctx.send(f"🔇 {member.mention} has been muted for {seconds} seconds.")
-        await asyncio.sleep(seconds)
-        await member.remove_roles(muted_role)
-        await ctx.send(f"🔈 {member.mention} has been unmuted.")
-    else:
-        await ctx.send(f"🔇 {member.mention} has been muted.")
+async def mute(ctx, member: discord.Member, seconds: int = 0, *, reason=None):
+    role = discord.utils.get(ctx.guild.roles, name="muted")
+    if not role:
+        try:
+            role = await ctx.guild.create_role(name="muted")
+            for channel in ctx.guild.channels:
+                await channel.set_permissions(role, speak=False, send_messages=False, read_message_history=True, read_messages=False)
+        except Exception as e:
+            return await ctx.send(f"```❌ Could not create muted role: {e}```")
+    if role in member.roles:
+        return await ctx.send(f"```❌ {member} is already muted.```")
+    try:
+        await member.add_roles(role, reason=reason)
+        await ctx.send(f"```✅ {member} has been muted for {seconds} seconds.\nReason: {reason if reason else 'No reason provided.'}```")
+        if seconds > 0:
+            await asyncio.sleep(seconds)
+            if role in member.roles:
+                await member.remove_roles(role)
+                await ctx.send(f"```✅ {member} has been unmuted after {seconds} seconds.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to mute: {e}```")
 
-# ----- unmute -----
+# Unmute command
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def unmute(ctx, member: discord.Member):
-    muted_role = discord.utils.get(ctx.guild.roles, name="muted")
-    if muted_role in member.roles:
-        await member.remove_roles(muted_role)
-        await ctx.send(f"🔈 {member.mention} has been unmuted.")
-    else:
-        await ctx.send(f"❌ {member.mention} is not muted.")
+    role = discord.utils.get(ctx.guild.roles, name="muted")
+    if not role or role not in member.roles:
+        return await ctx.send(f"```❌ {member} is not muted.```")
+    try:
+        await member.remove_roles(role)
+        await ctx.send(f"```✅ {member} has been unmuted.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to unmute: {e}```")
 
-# ----- announce -----
+# Announce command
 @bot.command()
-@commands.has_permissions(administrator=True)
+@commands.has_permissions(manage_messages=True)
 async def announce(ctx, channel: discord.TextChannel, *, message):
-    await channel.send(f"📢 Announcement:\n{message}")
-    await ctx.send("✅ Announcement sent.")
+    try:
+        await channel.send(f"📢 **Announcement:** {message}")
+        await ctx.send(f"```✅ Announcement sent to {channel.mention}.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to send announcement: {e}```")
 
-# ----- vanity (nickname change) -----
+# Vanity (nickname change)
 @bot.command()
 @commands.has_permissions(manage_nicknames=True)
 async def vanity(ctx, member: discord.Member, *, nickname):
-    await member.edit(nick=nickname)
-    await ctx.send(f"✏️ {member.mention}'s nickname changed to **{nickname}**.")
+    try:
+        await member.edit(nick=nickname)
+        await ctx.send(f"```✅ Changed nickname for {member} to '{nickname}'.```")
+    except Exception as e:
+        await ctx.send(f"```❌ Failed to change nickname: {e}```")
 
-# ----- warn and warnings storage -----
-warnings = {}
-
+# Warn command
 @bot.command()
 @commands.has_permissions(manage_messages=True)
 async def warn(ctx, member: discord.Member, *, reason=None):
-    user_id = str(member.id)
-    warnings[user_id] = warnings.get(user_id, 0) + 1
-    await ctx.send(f"⚠️ {member.mention} has been warned. Reason: {reason if reason else 'No reason provided'}. Total warnings: {warnings[user_id]}")
+    if member.id not in warnings_db:
+        warnings_db[member.id] = []
+    warnings_db[member.id].append(reason if reason else "No reason provided")
+    await ctx.send(f"```⚠️ {member} has been warned.\nReason: {reason if reason else 'No reason provided.'}```")
 
+# Warnings command
 @bot.command()
 async def warnings(ctx, member: discord.Member = None):
     member = member or ctx.author
-    user_id = str(member.id)
-    count = warnings.get(user_id, 0)
-    await ctx.send(f"⚠️ {member.mention} has {count} warning(s).")
+    warns = warnings_db.get(member.id, [])
+    if warns:
+        warn_list = "\n".join(f"{i+1}. {w}" for i, w in enumerate(warns))
+        await ctx.send(f"```Warnings for {member} ({len(warns)} total):\n{warn_list}```")
+    else:
+        await ctx.send(f"```{member} has no warnings.```")
 
-# ----- roles list -----
+# Roles command
 @bot.command()
 async def roles(ctx):
     roles = [role.name for role in ctx.guild.roles if role.name != "@everyone"]
-    roles_list = ", ".join(roles)
-    await ctx.send(f"📋 Roles in this server:\n{roles_list}")
+    roles_list = "\n".join(roles) if roles else "No roles found."
+    await ctx.send(f"```Roles in this server:\n{roles_list}```")
 
-# ----- giveaway -----
+# Giveaway command (basic)
 @bot.command()
-@commands.has_permissions(manage_guild=True)
+@commands.has_permissions(manage_messages=True)
 async def giveaway(ctx, seconds: int, *, prize):
-    embed = discord.Embed(title="🎉 Giveaway!", description=f"Prize: {prize}\nTime: {seconds} seconds", color=0x00ff00)
+    embed = discord.Embed(title="🎉 Giveaway!", description=f"Prize: {prize}\nReact with 🎉 to enter!\nEnds in {seconds} seconds.")
     giveaway_message = await ctx.send(embed=embed)
     await giveaway_message.add_reaction("🎉")
 
@@ -142,11 +180,33 @@ async def giveaway(ctx, seconds: int, *, prize):
                     users.add(user)
     if users:
         winner = random.choice(list(users))
-        await ctx.send(f"🎉 Congratulations {winner.mention}! You won **{prize}**!")
+        await ctx.send(f"🎉 Congratulations {winner.mention}! You won the giveaway for **{prize}**!")
     else:
-        await ctx.send("No valid entries, giveaway cancelled.")
+        await ctx.send("No valid entries for the giveaway.")
 
-# ----- custom help command -----
+# Custom help command (already removed default above)
 @bot.command()
 async def help(ctx):
-    help_text = """
+    help_text = (
+        "```"
+        "Available Commands:\n"
+        "• !ban <member> [reason] - Ban a member.\n"
+        "• !unban <user#1234> - Unban a user.\n"
+        "• !kick <member> [reason] - Kick a member.\n"
+        "• !giverole <member> <role> - Give a role.\n"
+        "• !takerole <member> <role> - Remove a role.\n"
+        "• !mute <member> [seconds] [reason] - Mute a member with muted role.\n"
+        "• !unmute <member> - Unmute a member.\n"
+        "• !announce <#channel> <message> - Send announcement.\n"
+        "• !vanity <member> <nickname> - Change nickname.\n"
+        "• !warn <member> [reason] - Warn a member.\n"
+        "• !warnings [member] - Show warnings count.\n"
+        "• !roles - List all roles.\n"
+        "• !giveaway <seconds> <prize> - Start a giveaway.\n"
+        "```"
+    )
+
+    await ctx.send(help_text)
+
+# Run the bot with your token from environment variable DISCORD_BOT_TOKEN
+bot.run(os.getenv("DISCORD_BOT_TOKEN"))
