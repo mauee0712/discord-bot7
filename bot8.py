@@ -226,25 +226,26 @@ async def giveaway(ctx, seconds: int, *, prize):
 
 # Custom help command
 bot.remove_command('help')
+
 @bot.command()
 async def help(ctx):
-    help_text = (
-        "```"
-        "Available Commands:\n"
-        "• !ban <member> [reason] - Ban a member.\n"
-        "• !unban <user#1234> - Unban a user.\n"
-        "• !kick <member> [reason] - Kick a member.\n"
-        "• !giverole <member> <role> - Give a role.\n"
-        "• !takerole <member> <role> - Remove a role.\n"
-        "• !mute <member> [seconds] [reason] - Mute a member with muted role.\n"
-        "• !unmute <member> - Unmute a member.\n"
-        "• !announce <#channel> <message> - Send announcement.\n"
-        "• !vanity <member> <nickname> - Change nickname.\n"
-        "• !warn <member> [reason] - Warn a member.\n"
-        "• !warnings [member] - Show warnings count.\n"
-        "• !roles - List all roles.\n"
-        "• !giveaway <seconds> <prize> - Start a giveaway.\n"
-        "```"
-    )
-    await ctx.send(help_text)
+    help_text = """```
+Available Commands:
 
+!ban <member> [reason]           - Ban a member.
+!unban <user#1234>               - Unban a user.
+!kick <member> [reason]          - Kick a member.
+!giverole <member> <role>        - Give a role to a member.
+!takerole <member> <role>        - Remove a role from a member.
+!mute <member> [seconds] [reason] - Mute a member with 'muted' role.
+!unmute <member>                 - Unmute a member.
+!announce <#channel> <message>   - Send an announcement.
+!vanity <member> <nickname>      - Change a member's nickname.
+!warn <member> [reason]          - Warn a member.
+!warnings [member]               - Show warnings for a member.
+!roles                          - List all roles in the server.
+!giveaway <seconds> <prize>      - Start a giveaway.
+
+Use commands responsibly!
+```"""
+    await ctx.send(help_text)
