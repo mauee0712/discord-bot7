@@ -78,7 +78,7 @@ async def kick(ctx, member: discord.Member, *, reason=None):
 # --- GIVE ROLE ---
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def give_role(ctx, member: discord.Member, *, role_name):
+async def giverole(ctx, member: discord.Member, *, role_name):
     role = get(ctx.guild.roles, name=role_name)
     if not role:
         return await ctx.send("❌ Role not found.")
@@ -88,7 +88,7 @@ async def give_role(ctx, member: discord.Member, *, role_name):
 # --- TAKE ROLE ---
 @bot.command()
 @commands.has_permissions(manage_roles=True)
-async def take_role(ctx, member: discord.Member, *, role_name):
+async def takerole(ctx, member: discord.Member, *, role_name):
     role = get(ctx.guild.roles, name=role_name)
     if not role:
         return await ctx.send("❌ Role not found.")
