@@ -195,4 +195,7 @@ Use commands responsibly!
     await ctx.send(format_box(help_text))
 
 # Run your bot
-bot.run("YOUR_BOT_TOKEN_HERE")
+import os
+
+bot.run(os.getenv("BOT_TOKEN"))
+
