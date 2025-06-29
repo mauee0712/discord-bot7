@@ -91,40 +91,23 @@ async def takerole(ctx, member: discord.Member, *, role_arg):
         await ctx.send(f"```❌ | Error: {e}```")
 
 @bot.command()
-@commands.has_permissions(manage_roles=True)
-async def mute(ctx, member: discord.Member, seconds: int = None, *, reason=None):
-    role = discord.utils.get(ctx.guild.roles, name="muted")
-    if not role:
-        await ctx.send("```❌ | 'muted' role missing. Create it first!```")
-        return
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
     try:
-        await member.add_roles(role, reason=reason)
-        if seconds:
-            await ctx.send(f"```✅ | Muted 🤐 {member} for {seconds}s | Reason: {reason or 'No reason provided.'}```")
-            await asyncio.sleep(seconds)
-            if role in member.roles:
-                await member.remove_roles(role)
-                await ctx.send(f"```✅ | Auto-unmuted 🔊 {member} after {seconds}s```")
-        else:
-            await ctx.send(f"```✅ | Muted 🤐 {member} indefinitely | Reason: {reason or 'No reason provided.'}```")
+        duration = discord.utils.utcnow() + discord.timedelta(minutes=minutes)
+        await member.timeout(until=duration, reason=reason)
+        await ctx.send(f"```✅ | Timed out ⏱️ {member.mention} for **{minutes} minutes**. 📝 Reason: {reason}```")
     except Exception as e:
-        await ctx.send(f"```❌ | Failed to mute {member} | Error: {e}```")
+        await ctx.send(f"```❌ | Couldn't timeout {member.mention}. Error: {e}```")
 
 @bot.command()
-@commands.has_permissions(manage_roles=True)
-async def unmute(ctx, member: discord.Member):
-    role = discord.utils.get(ctx.guild.roles, name="muted")
-    if not role:
-        await ctx.send("```❌ | 'muted' role missing.```")
-        return
-    if role in member.roles:
-        try:
-            await member.remove_roles(role)
-            await ctx.send(f"```✅ | Unmuted 🔊 {member}```")
-        except Exception as e:
-            await ctx.send(f"```❌ | Failed to unmute {member} | Error: {e}```")
-    else:
-        await ctx.send(f"```⚠️ | {member} is not muted.```")
+@commands.has_permissions(moderate_members=True)
+async def untimeout(ctx, member: discord.Member, *, reason="No reason provided"):
+    try:
+        await member.timeout(until=None, reason=reason)
+        await ctx.send(f"```✅ | Removed timeout from ⏱️ {member.mention}. 📝 Reason: {reason}```")
+    except Exception as e:
+        await ctx.send(f"```❌ | Couldn't remove timeout from {member.mention}. Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
@@ -136,13 +119,13 @@ async def announce(ctx, channel: discord.TextChannel, *, message):
         await ctx.send(f"```❌ | Failed to send announcement | Error: {e}```")
 
 @bot.command()
-@commands.has_permissions(manage_nicknames=True)
-async def vanity(ctx, member: discord.Member, *, nickname):
-    try:
-        await member.edit(nick=nickname)
-        await ctx.send(f"```✅ | Nickname changed ✏️ for {member} to '{nickname}'```")
-    except Exception as e:
-        await ctx.send(f"```❌ | Failed to change nickname | Error: {e}```")
+@commands.has_permissions(manage_guild=True)
+async def vanity(ctx):
+    vanity_url = ctx.guild.vanity_url
+    if vanity_url:
+        await ctx.send(f"```✅ | Server Vanity URL: {vanity_url}```")
+    else:
+        await ctx.send("```❌ | This server does not have a vanity URL set.```")
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
@@ -211,20 +194,31 @@ async def giveaway(ctx, seconds: int, *, prize):
 @bot.command()
 async def help(ctx):
     help_text = """```markdown
-# Custom Help
-!ban <member> [reason] - Ban a member.
-!unban <user#1234> - Unban a user.
-!kick <member> [reason] - Kick a member.
-!giverole <member> <role> - Give a role.
-!takerole <member> <role> - Remove a role.
-!mute <member> [seconds] [reason] - Mute a member.
-!unmute <member> - Unmute a member.
-!announce <#channel> <message> - Send announcement.
-!vanity <member> <nickname> - Change nickname.
-!warn <member> [reason] - Warn a member.
-!warnings [member] - Show warnings count.
-!roles - List all roles.
-!giveaway <seconds> <prize> - Start a giveaway.
+# 🤖 Discord Bot Commands
+
+Moderation:
+!ban <member> [reason]          - Ban a member
+!unban <user#1234>              - Unban a user
+!kick <member> [reason]         - Kick a member
+!timeout <member> <minutes>     - Timeout a member
+!untimeout <member>             - Remove timeout from a member
+!warn <member> [reason]         - Warn a member
+!warnings [member]              - Show a member’s warnings
+
+Roles & Permissions:
+!giverole <member> <role>       - Give a role to a user
+!takerole <member> <role>       - Remove a role from a user
+
+Server Management:
+!announce <#channel> <message>  - Send an announcement
+!vanity                         - Show the server's vanity URL
+!roles                          - List all roles in the server
+
+Fun & Community:
+!giveaway <seconds> <prize>     - Start a giveaway
+
+Help:
+!help                           - Show this help message
 ```"""
     await ctx.send(help_text)
 
