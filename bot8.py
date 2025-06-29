@@ -30,9 +30,9 @@ async def on_ready():
 async def ban(ctx, member: discord.Member, *, reason=None):
     try:
         await member.ban(reason=reason)
-        await ctx.send(f"```✅ | Banned 🚫 {member} | Reason: {reason or 'No reason provided.'}```")
+        await ctx.send(f"```\u2705 | Banned \ud83d\udeab {member} | Reason: {reason or 'No reason provided.'}```")
     except Exception as e:
-        await ctx.send(f"```❌ | Failed to ban {member} | Error: {e}```")
+        await ctx.send(f"```\u274c | Failed to ban {member} | Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(ban_members=True)
@@ -41,91 +41,90 @@ async def unban(ctx, user: str):
     try:
         name, discriminator = user.split("#")
     except Exception:
-        await ctx.send("```❌ | Invalid user format! Use Name#1234```")
+        await ctx.send("```\u274c | Invalid user format! Use Name#1234```")
         return
     for ban_entry in banned_users:
         banned_user = ban_entry.user
         if (banned_user.name, banned_user.discriminator) == (name, discriminator):
             await ctx.guild.unban(banned_user)
-            await ctx.send(f"```✅ | Unbanned ✅ {banned_user}```")
+            await ctx.send(f"```\u2705 | Unbanned \u2705 {banned_user}```")
             return
-    await ctx.send(f"```❌ | User {user} not found in ban list.```")
+    await ctx.send(f"```\u274c | User {user} not found in ban list.```")
 
 @bot.command()
 @commands.has_permissions(kick_members=True)
 async def kick(ctx, member: discord.Member, *, reason=None):
     try:
         await member.kick(reason=reason)
-        await ctx.send(f"```✅ | Kicked 👢 {member} | Reason: {reason or 'No reason provided.'}```")
+        await ctx.send(f"```\u2705 | Kicked \ud83d\udc48 {member} | Reason: {reason or 'No reason provided.'}```")
     except Exception as e:
-        await ctx.send(f"```❌ | Failed to kick {member} | Error: {e}```")
+        await ctx.send(f"```\u274c | Failed to kick {member} | Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def giverole(ctx, member: discord.Member, *, role_arg):
     role = get_role_by_argument(ctx.guild, role_arg)
     if not role:
-        await ctx.send(f"```❌ | Role `{role_arg}` not found.```")
+        await ctx.send(f"```\u274c | Role `{role_arg}` not found.```")
         return
+
+    if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        await ctx.send("```\u274c | You can't assign a role equal to or higher than your own.```")
+        return
+
+    if ctx.author.top_role <= member.top_role and ctx.author != ctx.guild.owner:
+        await ctx.send("```\u274c | You can't manage roles for members with equal or higher role than yours.```")
+        return
+
     try:
         await member.add_roles(role)
-        await ctx.send(f"```✅ | Given role 🎭 `{role.name}` to {member}```")
+        await ctx.send(f"```\u2705 | Given role \ud83c\udfad `{role.name}` to {member}```")
     except discord.Forbidden:
-        await ctx.send("```❌ | Missing permission to assign role.```")
+        await ctx.send("```\u274c | Missing permission to assign role.```")
     except Exception as e:
-        await ctx.send(f"```❌ | Error: {e}```")
+        await ctx.send(f"```\u274c | Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(manage_roles=True)
 async def takerole(ctx, member: discord.Member, *, role_arg):
     role = get_role_by_argument(ctx.guild, role_arg)
     if not role:
-        await ctx.send(f"```❌ | Role `{role_arg}` not found.```")
+        await ctx.send(f"```\u274c | Role `{role_arg}` not found.```")
         return
+
+    if role >= ctx.author.top_role and ctx.author != ctx.guild.owner:
+        await ctx.send("```\u274c | You can't remove a role equal to or higher than your own.```")
+        return
+
+    if ctx.author.top_role <= member.top_role and ctx.author != ctx.guild.owner:
+        await ctx.send("```\u274c | You can't manage roles for members with equal or higher role than yours.```")
+        return
+
     try:
         await member.remove_roles(role)
-        await ctx.send(f"```✅ | Removed role 🎭 `{role.name}` from {member}```")
+        await ctx.send(f"```\u2705 | Removed role \ud83c\udfad `{role.name}` from {member}```")
     except discord.Forbidden:
-        await ctx.send("```❌ | Missing permission to remove role.```")
+        await ctx.send("```\u274c | Missing permission to remove role.```")
     except Exception as e:
-        await ctx.send(f"```❌ | Error: {e}```")
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
-    try:
-        duration = discord.utils.utcnow() + discord.timedelta(minutes=minutes)
-        await member.timeout(until=duration, reason=reason)
-        await ctx.send(f"```✅ | Timed out ⏱️ {member.mention} for **{minutes} minutes**. 📝 Reason: {reason}```")
-    except Exception as e:
-        await ctx.send(f"```❌ | Couldn't timeout {member.mention}. Error: {e}```")
-
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def untimeout(ctx, member: discord.Member, *, reason="No reason provided"):
-    try:
-        await member.timeout(until=None, reason=reason)
-        await ctx.send(f"```✅ | Removed timeout from ⏱️ {member.mention}. 📝 Reason: {reason}```")
-    except Exception as e:
-        await ctx.send(f"```❌ | Couldn't remove timeout from {member.mention}. Error: {e}```")
+        await ctx.send(f"```\u274c | Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(administrator=True)
 async def announce(ctx, channel: discord.TextChannel, *, message):
     try:
-        await channel.send(f"📢 **Announcement:** {message}")
-        await ctx.send(f"```✅ | Announcement sent to {channel.mention}```")
+        await channel.send(f"\ud83d\udce2 **Announcement:** {message}")
+        await ctx.send(f"```\u2705 | Announcement sent to {channel.mention}```")
     except Exception as e:
-        await ctx.send(f"```❌ | Failed to send announcement | Error: {e}```")
+        await ctx.send(f"```\u274c | Failed to send announcement | Error: {e}```")
 
 @bot.command()
 @commands.has_permissions(manage_guild=True)
 async def vanity(ctx):
     vanity_url = ctx.guild.vanity_url
     if vanity_url:
-        await ctx.send(f"```✅ | Server Vanity URL: {vanity_url}```")
+        await ctx.send(f"```\u2705 | Server Vanity URL: {vanity_url}```")
     else:
-        await ctx.send("```❌ | This server does not have a vanity URL set.```")
+        await ctx.send("```\u274c | This server does not have a vanity URL set.```")
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
@@ -133,7 +132,7 @@ async def warn(ctx, member: discord.Member, *, reason="No reason provided"):
     guild_warns = warnings_db.setdefault(ctx.guild.id, {})
     user_warns = guild_warns.setdefault(member.id, [])
     user_warns.append(reason)
-    await ctx.send(f"```⚠️ | Warned ⚠️ {member}\nReason: {reason}\nTotal warnings: {len(user_warns)}```")
+    await ctx.send(f"```\u26a0\ufe0f | Warned \u26a0\ufe0f {member}\nReason: {reason}\nTotal warnings: {len(user_warns)}```")
 
 @bot.command()
 async def warnings(ctx, member: discord.Member = None):
@@ -142,15 +141,15 @@ async def warnings(ctx, member: discord.Member = None):
     user_warns = guild_warns.get(member.id, [])
     if user_warns:
         reasons = "\n".join(f"{i+1}. {r}" for i, r in enumerate(user_warns))
-        await ctx.send(f"```⚠️ | {member} has {len(user_warns)} warnings:\n{reasons}```")
+        await ctx.send(f"```\u26a0\ufe0f | {member} has {len(user_warns)} warnings:\n{reasons}```")
     else:
-        await ctx.send(f"```✅ | {member} has no warnings.```")
+        await ctx.send(f"```\u2705 | {member} has no warnings.```")
 
 @bot.command()
 async def roles(ctx):
     roles = [role.name for role in ctx.guild.roles if role.name != "@everyone"]
     roles_list = ", ".join(roles) if roles else "No roles found."
-    await ctx.send(f"```📋 | Roles:\n{roles_list}```")
+    await ctx.send(f"```\ud83d\udccb | Roles:\n{roles_list}```")
 
 giveaways = {}
 
@@ -158,11 +157,11 @@ giveaways = {}
 @commands.has_permissions(administrator=True)
 async def giveaway(ctx, seconds: int, *, prize):
     if seconds <= 0:
-        await ctx.send("```❌ | Duration must be > 0 seconds.```")
+        await ctx.send("```\u274c | Duration must be > 0 seconds.```")
         return
-    embed = discord.Embed(title="🎉 Giveaway!", description=f"Prize: {prize}\nReact with 🎉 to enter!", color=discord.Color.gold())
+    embed = discord.Embed(title="\ud83c\udf89 Giveaway!", description=f"Prize: {prize}\nReact with \ud83c\udf89 to enter!", color=discord.Color.gold())
     giveaway_message = await ctx.send(embed=embed)
-    await giveaway_message.add_reaction("🎉")
+    await giveaway_message.add_reaction("\ud83c\udf89")
 
     giveaways[giveaway_message.id] = {
         "prize": prize,
@@ -175,7 +174,7 @@ async def giveaway(ctx, seconds: int, *, prize):
     giveaway_message = await ctx.channel.fetch_message(giveaway_message.id)
     users = set()
     for reaction in giveaway_message.reactions:
-        if str(reaction.emoji) == "🎉":
+        if str(reaction.emoji) == "\ud83c\udf89":
             async for user in reaction.users():
                 if user != bot.user:
                     users.add(user)
@@ -183,11 +182,11 @@ async def giveaway(ctx, seconds: int, *, prize):
     if users:
         try:
             winner = random.choice(list(users))
-            await ctx.send(f"```✅ | Gave 🤩 Winner!! 🥇 to {winner.display_name}```")
+            await ctx.send(f"```\u2705 | Gave \ud83e\udd29 Winner!! \ud83e\udd47 to {winner.display_name}```")
         except Exception:
-            await ctx.send(f"```🎉 | Giveaway ended! No valid winner found.```")
+            await ctx.send(f"```\ud83c\udf89 | Giveaway ended! No valid winner found.```")
     else:
-        await ctx.send("```🎉 | Giveaway ended! No participants.```")
+        await ctx.send("```\ud83c\udf89 | Giveaway ended! No participants.```")
 
     giveaways[giveaway_message.id]["ended"] = True
 
@@ -200,8 +199,6 @@ Moderation:
 !ban <member> [reason]          - Ban a member
 !unban <user#1234>              - Unban a user
 !kick <member> [reason]         - Kick a member
-!timeout <member> <minutes>     - Timeout a member
-!untimeout <member>             - Remove timeout from a member
 !warn <member> [reason]         - Warn a member
 !warnings [member]              - Show a member’s warnings
 
